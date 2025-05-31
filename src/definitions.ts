@@ -989,37 +989,37 @@ export interface StripeTerminalInterface {
   addListener(
     eventName: 'requestConnectionToken',
     listenerFunc: () => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'didReportUnexpectedReaderDisconnect',
     listenerFunc: () => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'readersDiscovered',
     listenerFunc: (event: { readers?: Reader[] }) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'didChangeConnectionStatus',
     listenerFunc: (status: any) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'didReportReaderSoftwareUpdateProgress',
     listenerFunc: (data: any) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'didRequestReaderDisplayMessage' | 'didRequestReaderInput',
     listenerFunc: (data: any) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'didReportAvailableUpdate' | 'didStartInstallingUpdate',
     listenerFunc: (data: any) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: 'didFinishInstallingUpdate',
@@ -1027,7 +1027,7 @@ export interface StripeTerminalInterface {
       update?: ReaderSoftwareUpdate
       error?: string
     }) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName:
@@ -1035,10 +1035,10 @@ export interface StripeTerminalInterface {
       | 'didSucceedReaderReconnect'
       | 'didFailReaderReconnect',
     listenerFunc: (data: null) => void
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 
   addListener(
     eventName: string,
     listenerFunc: Function
-  ): Promise<PluginListenerHandle> & PluginListenerHandle
+  ): Promise<PluginListenerHandle>
 }
