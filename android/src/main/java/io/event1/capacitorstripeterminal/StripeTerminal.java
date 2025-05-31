@@ -19,11 +19,13 @@ import com.stripe.stripeterminal.external.callable.Cancelable;
 import com.stripe.stripeterminal.external.callable.ConnectionTokenCallback;
 import com.stripe.stripeterminal.external.callable.ConnectionTokenProvider;
 import com.stripe.stripeterminal.external.callable.DiscoveryListener;
+import com.stripe.stripeterminal.external.callable.MobileReaderListener;
+import com.stripe.stripeterminal.external.callable.TapToPayReaderListener;
+import com.stripe.stripeterminal.external.callable.InternetReaderListener;
 import com.stripe.stripeterminal.external.callable.HandoffReaderListener;
 import com.stripe.stripeterminal.external.callable.LocationListCallback;
 import com.stripe.stripeterminal.external.callable.PaymentIntentCallback;
 import com.stripe.stripeterminal.external.callable.ReaderCallback;
-import com.stripe.stripeterminal.external.callable.ReaderListener;
 import com.stripe.stripeterminal.external.callable.ReaderReconnectionListener;
 import com.stripe.stripeterminal.external.callable.TerminalListener;
 import com.stripe.stripeterminal.external.models.BatteryStatus;
@@ -33,10 +35,11 @@ import com.stripe.stripeterminal.external.models.CollectConfiguration;
 import com.stripe.stripeterminal.external.models.ConnectionConfiguration.BluetoothConnectionConfiguration;
 import com.stripe.stripeterminal.external.models.ConnectionConfiguration.HandoffConnectionConfiguration;
 import com.stripe.stripeterminal.external.models.ConnectionConfiguration.InternetConnectionConfiguration;
-import com.stripe.stripeterminal.external.models.ConnectionConfiguration.LocalMobileConnectionConfiguration;
+import com.stripe.stripeterminal.external.models.ConnectionConfiguration.TapToPayConnectionConfiguration;
 import com.stripe.stripeterminal.external.models.ConnectionConfiguration.UsbConnectionConfiguration;
 import com.stripe.stripeterminal.external.models.ConnectionStatus;
 import com.stripe.stripeterminal.external.models.ConnectionTokenException;
+import com.stripe.stripeterminal.external.models.DisconnectReason;
 import com.stripe.stripeterminal.external.models.DiscoveryConfiguration;
 import com.stripe.stripeterminal.external.models.ListLocationsParameters;
 import com.stripe.stripeterminal.external.models.Location;
@@ -50,6 +53,7 @@ import com.stripe.stripeterminal.external.models.ReaderSoftwareUpdate;
 import com.stripe.stripeterminal.external.models.SimulateReaderUpdate;
 import com.stripe.stripeterminal.external.models.SimulatedCard;
 import com.stripe.stripeterminal.external.models.SimulatedCardType;
+import com.stripe.stripeterminal.external.models.SimulatedCollectInputsResult;
 import com.stripe.stripeterminal.external.models.SimulatorConfiguration;
 import com.stripe.stripeterminal.external.models.TerminalException;
 import com.stripe.stripeterminal.log.LogLevel;
@@ -80,7 +84,9 @@ public class StripeTerminal
     ConnectionTokenProvider,
     TerminalListener,
     DiscoveryListener,
-    ReaderListener,
+    MobileReaderListener,
+    TapToPayReaderListener,
+    InternetReaderListener,
     ReaderReconnectionListener,
     HandoffReaderListener {
 
@@ -355,12 +361,12 @@ public class StripeTerminal
     // Boolean allowCustomerCancel = call.getBoolean("allowCustomerCancel", false);
 
     InternetConnectionConfiguration connectionConfig = new InternetConnectionConfiguration(
-      failIfInUse
+      failIfInUse, this
     );
 
     Terminal
       .getInstance()
-      .connectInternetReader(
+      .connectReader(
         reader,
         connectionConfig,
         this.createReaderCallback(call)
@@ -395,10 +401,9 @@ public class StripeTerminal
 
     Terminal
       .getInstance()
-      .connectBluetoothReader(
+      .connectReader(
         reader,
         connectionConfig,
-        this,
         this.createReaderCallback(call)
       );
   }
@@ -419,15 +424,15 @@ public class StripeTerminal
     }
 
     UsbConnectionConfiguration connectionConfig = new UsbConnectionConfiguration(
-      locationId
+      locationId,
+      this
     );
 
     Terminal
       .getInstance()
-      .connectUsbReader(
+      .connectReader(
         reader,
         connectionConfig,
-        this,
         this.createReaderCallback(call)
       );
   }
@@ -447,13 +452,14 @@ public class StripeTerminal
       return;
     }
 
-    LocalMobileConnectionConfiguration connectionConfig = new LocalMobileConnectionConfiguration(
-      locationId
+    TapToPayConnectionConfiguration connectionConfig = new TapToPayConnectionConfiguration(
+      locationId,
+      this
     );
 
     Terminal
       .getInstance()
-      .connectLocalMobileReader(
+      .connectReader(
         reader,
         connectionConfig,
         this.createReaderCallback(call)
@@ -475,14 +481,13 @@ public class StripeTerminal
       return;
     }
 
-    HandoffConnectionConfiguration connectionConfig = new HandoffConnectionConfiguration();
+    HandoffConnectionConfiguration connectionConfig = new HandoffConnectionConfiguration(this);
 
     Terminal
       .getInstance()
-      .connectHandoffReader(
+      .connectReader(
         reader,
         connectionConfig,
-        this,
         this.createReaderCallback(call)
       );
   }
@@ -893,10 +898,13 @@ public class StripeTerminal
       simulatedCard = new SimulatedCard(type);
     }
 
+    SimulatedCollectInputsResult simulatedCollectInputsResult = new SimulatedCollectInputsResult.SimulatedCollectInputsResultSucceeded();
     SimulatorConfiguration newConfig = new SimulatorConfiguration(
       availableReaderUpdate,
       simulatedCard,
-      null
+      null,
+      false,
+      simulatedCollectInputsResult
     );
 
     Terminal.getInstance().setSimulatorConfiguration(newConfig);
@@ -973,12 +981,12 @@ public class StripeTerminal
     notifyListeners("didReportReaderEvent", ret);
   }
 
-  @Override
+  /*@Override
   public void onUnexpectedReaderDisconnect(@NonNull Reader reader) {
     JSObject ret = new JSObject();
     ret.put("reader", TerminalUtils.serializeReader(reader));
     notifyListeners("didReportUnexpectedReaderDisconnect", ret);
-  }
+  }*/
 
   @Override
   public void onUpdateDiscoveredReaders(@NonNull List<Reader> list) {
@@ -1088,7 +1096,7 @@ public class StripeTerminal
   }
 
   @Override
-  public void onReaderReconnectStarted(@NonNull Reader reader, @NonNull Cancelable cancelReconnect) {
+  public void onReaderReconnectStarted(@NonNull Reader reader, @NonNull Cancelable cancelReconnect, @NonNull DisconnectReason disconnectReason) {
     pendingReaderAutoReconnect = cancelReconnect;
     notifyListeners("didStartReaderReconnect", null);
   }

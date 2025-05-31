@@ -2,12 +2,11 @@ package io.event1.capacitorstripeterminal;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
-import com.squareup.moshi.Moshi;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.stripe.stripeterminal.external.models.Address;
 import com.stripe.stripeterminal.external.models.AmountDetails;
-import com.stripe.stripeterminal.external.models.AmountDetailsJsonAdapter;
 import com.stripe.stripeterminal.external.models.Charge;
-import com.stripe.stripeterminal.external.models.ChargeJsonAdapter;
 import com.stripe.stripeterminal.external.models.ConnectionStatus;
 import com.stripe.stripeterminal.external.models.DeviceType;
 import com.stripe.stripeterminal.external.models.DiscoveryConfiguration;
@@ -15,7 +14,6 @@ import com.stripe.stripeterminal.external.models.Location;
 import com.stripe.stripeterminal.external.models.PaymentIntent;
 import com.stripe.stripeterminal.external.models.PaymentIntentStatus;
 import com.stripe.stripeterminal.external.models.PaymentMethod;
-import com.stripe.stripeterminal.external.models.PaymentMethodJsonAdapter;
 import com.stripe.stripeterminal.external.models.PaymentStatus;
 import com.stripe.stripeterminal.external.models.Reader;
 import com.stripe.stripeterminal.external.models.ReaderDisplayMessage;
@@ -24,6 +22,8 @@ import com.stripe.stripeterminal.external.models.ReaderSoftwareUpdate;
 import com.stripe.stripeterminal.external.models.SimulatorConfiguration;
 
 public class TerminalUtils {
+
+  static Gson gson = new GsonBuilder().create();
 
   public static Object serializeReader(Reader reader) {
     if (reader == null) {
@@ -116,31 +116,24 @@ public class TerminalUtils {
       paymentIntent.getStatementDescriptorSuffix()
     );
 
-    Moshi moshi = new Moshi.Builder().build();
 
     PaymentMethod paymentMethod = paymentIntent.getPaymentMethod();
     AmountDetails amountDetails = paymentIntent.getAmountDetails();
 
     if (amountDetails != null) {
-      AmountDetailsJsonAdapter adapter = new AmountDetailsJsonAdapter(moshi);
-      String amountDetailsString = adapter.toJson(amountDetails);
+      String amountDetailsString = gson.toJson(amountDetails);
       object.put("amountDetails", amountDetailsString);
     }
 
     if (paymentMethod != null) {
-      PaymentMethodJsonAdapter paymentMethodAdapter = new PaymentMethodJsonAdapter(
-        moshi
-      );
-      String paymentMethodString = paymentMethodAdapter.toJson(paymentMethod);
+      String paymentMethodString = gson.toJson(paymentMethod);
       object.put("paymentMethod", paymentMethodString);
     }
 
     JSArray charges = new JSArray();
     if (paymentIntent.getCharges() != null) {
-      ChargeJsonAdapter adapter = new ChargeJsonAdapter(moshi);
-
       for (Charge charge : paymentIntent.getCharges()) {
-        charges.put(adapter.toJson(charge));
+        charges.put(gson.toJson(charge));
       }
     }
     object.put("charges", charges);
@@ -165,7 +158,7 @@ public class TerminalUtils {
 
     JSObject object = new JSObject();
 
-    ReaderSoftwareUpdate.UpdateTimeEstimate updateTimeEstimate = readerSoftwareUpdate.getTimeEstimate();
+    ReaderSoftwareUpdate.UpdateDurationEstimate updateTimeEstimate = readerSoftwareUpdate.getDurationEstimate();
 
     object.put(
       "estimatedUpdateTimeString",
@@ -174,7 +167,7 @@ public class TerminalUtils {
     object.put("estimatedUpdateTime", updateTimeEstimate.ordinal());
     object.put("deviceSoftwareVersion", readerSoftwareUpdate.getVersion());
     object.put("components", readerSoftwareUpdate.getComponents());
-    object.put("requiredAt", readerSoftwareUpdate.getRequiredAt().getTime());
+    object.put("requiredAt", readerSoftwareUpdate.getRequiredAtMs());
 
     return object;
   }
@@ -240,7 +233,7 @@ public class TerminalUtils {
     } else if (method == 1) {
       return new DiscoveryConfiguration.BluetoothDiscoveryConfiguration(timeout, simulated);
     } else if (method == 2) {
-      return new DiscoveryConfiguration.InternetDiscoveryConfiguration(locationId, simulated);
+      return new DiscoveryConfiguration.InternetDiscoveryConfiguration(timeout, locationId, simulated);
     } else if (method == 4) {
       return new DiscoveryConfiguration.UsbDiscoveryConfiguration(timeout, simulated);
     // } else if (method == 5) {
@@ -248,7 +241,7 @@ public class TerminalUtils {
     } else if (method == 6) {
       return new DiscoveryConfiguration.HandoffDiscoveryConfiguration();
     } else if (method == 7) {
-      return new DiscoveryConfiguration.LocalMobileDiscoveryConfiguration(simulated);
+      return new DiscoveryConfiguration.TapToPayDiscoveryConfiguration(simulated);
     } else {
       return new DiscoveryConfiguration.BluetoothDiscoveryConfiguration();
     }
