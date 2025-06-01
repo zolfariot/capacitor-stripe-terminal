@@ -35,8 +35,8 @@ public class StripeTerminalUtils {
 
     static func serializeUpdate(update: ReaderSoftwareUpdate) -> [String: Any] {
         let jsonObject: [String: Any] = [
-            "estimatedUpdateTimeString": ReaderSoftwareUpdate.string(from: update.estimatedUpdateTime),
-            "estimatedUpdateTime": update.estimatedUpdateTime.rawValue,
+            "estimatedUpdateTimeString": ReaderSoftwareUpdate.string(from: update.durationEstimate),
+            "estimatedUpdateTime": update.durationEstimate.rawValue,
             "deviceSoftwareVersion": update.deviceSoftwareVersion,
             "components": update.components.rawValue,
             "requiredAt": update.requiredAt.timeIntervalSince1970,
@@ -128,7 +128,7 @@ public class StripeTerminalUtils {
                 .setLocationId(locationId)
                 .build()
         } else if (method == 7) {
-            return try LocalMobileDiscoveryConfigurationBuilder()
+            return try TapToPayDiscoveryConfigurationBuilder()
                 .setSimulated(simulated)
                 .build()
         } else {

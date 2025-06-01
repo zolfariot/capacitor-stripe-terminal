@@ -7,7 +7,9 @@ import StripeTerminal
  * here: https://capacitor.ionicframework.com/docs/plugins/ios
  */
 @objc(StripeTerminal)
-public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelegate, TerminalDelegate, BluetoothReaderDelegate, ReconnectionDelegate, LocalMobileReaderDelegate {
+public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelegate, TerminalDelegate, MobileReaderDelegate, InternetReaderDelegate, TapToPayReaderDelegate {
+
+    
     private var pendingConnectionTokenCompletionBlock: ConnectionTokenCompletionBlock?
     private var pendingDiscoverReaders: Cancelable?
     private var pendingInstallUpdate: Cancelable?
@@ -170,15 +172,14 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
 
         let autoReconnectOnUnexpectedDisconnect = call.getBool("autoReconnectOnUnexpectedDisconnect", false)
 
-        let connectionConfig = try! BluetoothConnectionConfigurationBuilder(locationId: locationId)
+        let connectionConfig = try! BluetoothConnectionConfigurationBuilder(delegate: self, locationId: locationId)
             .setAutoReconnectOnUnexpectedDisconnect(autoReconnectOnUnexpectedDisconnect)
-            .setAutoReconnectionDelegate(self)
             .build()
 
         // this must be run on the main thread
         // https://stackoverflow.com/questions/44767778/main-thread-checker-ui-api-called-on-a-background-thread-uiapplication-appli
         DispatchQueue.main.async {
-            Terminal.shared.connectBluetoothReader(reader, delegate: self, connectionConfig: connectionConfig, completion: { reader, error in
+            Terminal.shared.connectReader(reader, connectionConfig: connectionConfig, completion: { reader, error in
                 if let reader = reader {
                     call.resolve([
                         "reader": StripeTerminalUtils.serializeReader(reader: reader),
@@ -204,7 +205,7 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
         let failIfInUse = call.getBool("failIfInUse") ?? false
         let allowCustomerCancel = call.getBool("allowCustomerCancel") ?? false
 
-        let config = try! InternetConnectionConfigurationBuilder()
+        let config = try! InternetConnectionConfigurationBuilder(delegate: self)
             .setFailIfInUse(failIfInUse)
             .setAllowCustomerCancel(allowCustomerCancel)
             .build()
@@ -212,7 +213,7 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
         // this must be run on the main thread
         // https://stackoverflow.com/questions/44767778/main-thread-checker-ui-api-called-on-a-background-thread-uiapplication-appli
         DispatchQueue.main.async {
-            Terminal.shared.connectInternetReader(reader, connectionConfig: config, completion: { reader, error in
+            Terminal.shared.connectReader(reader, connectionConfig: config, completion: { reader, error in
                 if let reader = reader {
                     call.resolve([
                         "reader": StripeTerminalUtils.serializeReader(reader: reader),
@@ -245,7 +246,7 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
         let tosAcceptancePermitted = call.getBool("tosAcceptancePermitted", false)
         let returnReadResultImmediatelyEnabled = call.getBool("returnReadResultImmediatelyEnabled", true)
 
-        let connectionConfig = try! LocalMobileConnectionConfigurationBuilder(locationId: locationId)
+        let connectionConfig = try! TapToPayConnectionConfigurationBuilder(delegate: self, locationId: locationId)
             .setMerchantDisplayName(merchantDisplayName)
             .setOnBehalfOf(onBehalfOf)
             .setTosAcceptancePermitted(tosAcceptancePermitted)
@@ -255,7 +256,7 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
         // this must be run on the main thread
         // https://stackoverflow.com/questions/44767778/main-thread-checker-ui-api-called-on-a-background-thread-uiapplication-appli
         DispatchQueue.main.async {
-            Terminal.shared.connectLocalMobileReader(reader, delegate: self, connectionConfig: connectionConfig, completion: { reader, error in
+            Terminal.shared.connectReader(reader, connectionConfig: connectionConfig, completion: { reader, error in
                 if let reader = reader {
                     call.resolve([
                         "reader": StripeTerminalUtils.serializeReader(reader: reader),
@@ -618,17 +619,17 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
         
     // MARK: LocalMobileReaderDelegate
 
-    public func localMobileReader(_ reader: Reader, didStartInstallingUpdate update: ReaderSoftwareUpdate, cancelable: Cancelable?) {
+    public func tapToPayReader(_ reader: Reader, didStartInstallingUpdate update: ReaderSoftwareUpdate, cancelable: Cancelable?) {
         pendingInstallUpdate = cancelable
         currentUpdate = update
         notifyListeners("didStartInstallingUpdate", data: ["update": StripeTerminalUtils.serializeUpdate(update: update)])
     }
 
-    public func localMobileReader(_ reader: Reader, didReportReaderSoftwareUpdateProgress progress: Float) {
+    public func tapToPayReader(_ reader: Reader, didReportReaderSoftwareUpdateProgress progress: Float) {
         notifyListeners("didReportReaderSoftwareUpdateProgress", data: ["progress": progress])
     }
 
-    public func localMobileReader(_ reader: Reader, didFinishInstallingUpdate update: ReaderSoftwareUpdate?, error: Error?) {
+    public func tapToPayReader(_ reader: Reader, didFinishInstallingUpdate update: ReaderSoftwareUpdate?, error: Error?) {
         if let error = error {
             notifyListeners("didFinishInstallingUpdate", data: ["error": error.localizedDescription as Any])
         } else if let update = update {
@@ -637,15 +638,15 @@ public class StripeTerminal: CAPPlugin, ConnectionTokenProvider, DiscoveryDelega
         }
     }
     
-    public func localMobileReader(_: Reader, didRequestReaderInput inputOptions: ReaderInputOptions = []) {
+    public func tapToPayReader(_: Reader, didRequestReaderInput inputOptions: ReaderInputOptions = []) {
         notifyListeners("didRequestReaderInput", data: ["value": inputOptions.rawValue])
     }
 
-    public func localMobileReader(_: Reader, didRequestReaderDisplayMessage displayMessage: ReaderDisplayMessage) {
+    public func tapToPayReader(_: Reader, didRequestReaderDisplayMessage displayMessage: ReaderDisplayMessage) {
         notifyListeners("didRequestReaderDisplayMessage", data: ["value": displayMessage.rawValue])
     }
     
-    public func localMobileReaderDidAcceptTermsOfService(_: Reader) {
+    public func tapToPayReaderDidAcceptTermsOfService(_: Reader) {
         notifyListeners("localMobileReaderDidAcceptTermsOfService", data: nil)
     }
 
