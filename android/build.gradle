@@ -11,7 +11,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
+        classpath 'com.android.tools.build:gradle:8.4.2'
     }
 }
 
@@ -57,8 +57,5 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation "com.stripe:stripeterminal-taptopay:4.4.0"
     implementation "com.stripe:stripeterminal-core:4.4.0"
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx") {
-      version {strictly "2.8.7"}
-    }
     implementation "com.google.code.gson:gson:2.12.1"
 }
